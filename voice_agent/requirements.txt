@@ -1,10 +1,21 @@
-fastapi==0.115.6
-uvicorn[standard]==0.34.0
-websockets==14.1
-httpx==0.28.1
-anthropic==0.42.0
-twilio==9.4.1
-python-dotenv==1.0.1
-PyYAML==6.0.2
-pytest==8.3.4
-pytest-asyncio==0.25.0
+# Minimum versions, verified against the versions noted in the comments.
+# anthropic must be 1.x: the agent uses output_config/effort and adaptive
+# thinking, neither of which exists in 0.x.
+anthropic>=1.6.0                # tested on 1.6.0
+
+fastapi>=0.115.0                # tested on 0.141.1
+uvicorn[standard]>=0.34.0       # tested on 0.53.0
+# Twilio posts form-encoded bodies to /call-status. FastAPI refuses to start
+# the app at all without this, so it is not optional.
+python-multipart>=0.0.20        # tested on 0.0.32
+
+# websockets must be 14+: the STT and TTS clients pass additional_headers,
+# which older releases spell extra_headers.
+websockets>=14.0                # tested on 17.1
+
+twilio>=9.4.0                   # tested on 9.11.1
+httpx>=0.28.0                   # tested on 0.28.1
+PyYAML>=6.0                     # tested on 6.0.1
+python-dotenv>=1.0.0            # tested on 1.2.3
+
+pytest>=8.0                     # tested on 9.1.1

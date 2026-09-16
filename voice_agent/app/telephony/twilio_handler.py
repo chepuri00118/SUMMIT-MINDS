@@ -18,6 +18,14 @@ def client() -> Client:
 
 def connect_stream_twiml(lead_id: str) -> str:
     """Hand the call's audio to our media-stream websocket, both directions."""
+    # Without this guard an unset PUBLIC_BASE_URL silently yields
+    # url="/media-stream", which Twilio rejects - and the only place you would
+    # find out is a live call that connects and then drops in silence.
+    if not settings.public_base_url:
+        raise RuntimeError(
+            "PUBLIC_BASE_URL is not set, so Twilio has no address to stream audio to. "
+            "Set it to the public https URL of this server (an ngrok URL in development)."
+        )
     base = settings.public_base_url.replace("https://", "wss://").replace("http://", "ws://")
     url = f"{base}/media-stream"
     return (
