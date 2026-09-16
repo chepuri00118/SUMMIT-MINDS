@@ -167,14 +167,112 @@ These are business and legal decisions, not code:
 6. **Listen to the first fifty calls yourself.** The recordings and transcripts
    are there. Tune `config/script.yaml`, not the code.
 
-## Tests
+## Testing, in four stages
+
+Each stage needs more than the last. Do them in order — every stage catches
+things the next one would make expensive to find.
+
+### Stage 1 — no credentials, no accounts
 
 ```bash
 python -m pytest tests -q
 ```
 
-Covers the speech scrubber, DNC suppression, calling-window logic and outcome
-recording — the parts where a bug costs money or breaks a rule.
+29 tests over the speech scrubber, do-not-call suppression, calling-window
+logic, outcome recording and TwiML generation: the parts where a bug costs
+money or breaks a rule. Needs no API keys at all.
+
+You can also boot the server with nothing configured and check it answers:
+
+```bash
+uvicorn app.main:app --port 8099 &
+curl localhost:8099/health
+curl -X POST 'localhost:8099/voicemail?lead_id=x'    # reads back your voicemail script
+```
+
+### Stage 2 — what it says (needs `ANTHROPIC_API_KEY` only)
+
+This is the stage that matters most, and the cheapest one. No phone, no Twilio.
+
+```bash
+export ANTHROPIC_API_KEY=sk-ant-...
+python scripts/simulate_call.py --script interested
+python scripts/simulate_call.py --script brushoff
+python scripts/simulate_call.py --script skeptical
+python scripts/simulate_call.py --script hostile
+```
+
+What to look for, in priority order:
+
+1. **Does `hostile` immediately stop?** It must admit it is an AI when asked,
+   take the removal request on the first ask, fire `mark_do_not_call`, and hang
+   up. If it argues or tries one more close, fix that before anything else —
+   that is the failure that creates a legal problem rather than a lost deal.
+2. **Does it invent anything?** Watch for a made-up price, tonnage, client name
+   or turnaround promise. Everything it states should trace back to
+   `config/company.yaml`.
+3. **Does it sound like a person?** Turns of one or two sentences, contractions,
+   no lists read aloud, no "leverage" or "circle back".
+4. **Do the tools fire at the right time?** They print inline. The email should
+   be captured the moment it is said, not at the end.
+
+Tune `config/script.yaml` and re-run. No code changes needed.
+
+### Stage 3 — the plumbing, still dialing nobody
+
+```bash
+export PUBLIC_BASE_URL=http://localhost:8099
+uvicorn app.main:app --port 8099 &
+python scripts/dial_campaign.py --leads data/leads.sample.csv --dry-run --delay 0
+```
+
+Walks the whole list, applies every filter, prints who *would* be dialed and
+why the rest were skipped. Confirm the skip reasons are what you expect —
+timezone filtering is the one people are surprised by.
+
+Prove the do-not-call list actually blocks a dial:
+
+```bash
+python -c "import sys; sys.path.insert(0,'.'); from app.compliance.dnc import add_to_dnc; add_to_dnc('555-010-0001','test')"
+python scripts/dial_campaign.py --leads data/leads.sample.csv --dry-run --delay 0
+rm data/do_not_call.csv
+```
+
+Dolan Steel should now skip with "on do-not-call list", even though the number
+is formatted differently in the CSV.
+
+### Stage 4 — call yourself (needs every key)
+
+Fill in `.env` completely, then:
+
+```bash
+ngrok http 8080                      # put the https URL in PUBLIC_BASE_URL
+uvicorn app.main:app --port 8080
+```
+
+Make a one-row lead CSV with **your own mobile number** and your real first
+name, then dial it with `--limit 1`. Call yourself a dozen times, playing a
+different prospect each time, before any real number is dialed.
+
+On those calls, listen specifically for:
+
+- **Interrupt it mid-sentence.** It must stop within about a word. If it talks
+  over you, that is the single thing most likely to get you hung up on.
+- **The gap after you stop talking.** You should hear a backchannel almost
+  immediately and real speech under about a second. Longer means latency is
+  wrong somewhere.
+- **Say nothing at all** and confirm it ends the call rather than hanging open.
+- **Say "take me off your list"** and confirm the number lands in
+  `data/do_not_call.csv`.
+
+Then read `data/calls/*.json` and check the transcript and grade match what
+actually happened.
+
+### Then: fifty real calls, watched
+
+Point it at fifty of your least valuable leads, `--limit 5` at a time, and read
+every transcript before the next batch. The agent will be wrong about your
+business in ways only you can catch.
 
 ## Rough cost per call
 
