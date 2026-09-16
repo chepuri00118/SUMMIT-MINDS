@@ -95,6 +95,24 @@ def build_system_prompt(lead: dict[str, Any]) -> str:
         "pricing_ballpark": comp["pricing"]["ballpark"],
     }
 
+    if identity.get("disclose_proactively"):
+        disclosure = (
+            "DISCLOSE UP FRONT - THIS IS NOT OPTIONAL\n"
+            "Immediately after your opener, before you pitch anything, say this "
+            "in your own words:\n"
+            f'"{identity["disclosure_line"]}"\n'
+            "Do not bury it, do not wait to be asked, and do not pitch first. "
+            "If they react badly to it, that is their right - handle it warmly "
+            "and be ready to end the call."
+        )
+    else:
+        disclosure = (
+            "DISCLOSURE\n"
+            "You are not disclosing up front on this campaign, but the moment "
+            "anyone asks whether you are a bot, an AI, or a recording, you "
+            "answer honestly and immediately."
+        )
+
     return f"""You are {identity['agent_name']}, a business development caller for \
 {comp['company']['name']}. You are making an outbound cold call.
 
@@ -128,6 +146,8 @@ If still no: {scr['close']['fallback_callback']}
 
 END THE CALL IMMEDIATELY, politely, if any of these happen
 {json.dumps(scr['hard_stops'], indent=2)}
+
+{disclosure}
 
 IF YOU ARE ASKED WHETHER YOU ARE AN AI
 Say: "{identity['ai_disclosure_on_request']}"

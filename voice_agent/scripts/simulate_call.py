@@ -68,7 +68,7 @@ SCRIPTED_PROSPECTS = {
         "We already have a detailer.",
         "No, they're fine. We've used them for years.",
         "Just send me an email I guess.",
-        "tom at whitfieldstructural dot com. Alright, bye.",
+        "mike at dolansteel dot com. Alright, bye.",
     ],
     "hostile": [
         "How did you get this number?",
