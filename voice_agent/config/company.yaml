@@ -1,0 +1,73 @@
+# ---------------------------------------------------------------------------
+# RNT Steel Detailing - company profile used by the voice agent.
+#
+# !! VERIFY EVERY FIELD BEFORE GOING LIVE !!
+# The agent speaks these facts on real calls. Anything wrong here becomes a
+# wrong claim to a prospect. Fields marked TODO are placeholders.
+# ---------------------------------------------------------------------------
+
+company:
+  name: "RNT Steel Detailing"
+  short_name: "RNT"
+  website: "https://www.rntsteeldetail.com"
+  founded_year: 2014          # TODO verify
+  team_size: "40+ detailers"  # TODO verify
+  headquarters: "Hyderabad, India"   # TODO verify
+  markets:
+    - "United States"
+    - "Canada"
+    - "United Kingdom"
+    - "Australia"
+
+services:
+  - name: "Structural steel detailing"
+    blurb: "Fabrication and erection drawings, assembly and single-part drawings, anchor bolt plans."
+  - name: "Miscellaneous steel detailing"
+    blurb: "Stairs, handrails, ladders, platforms, grating and embeds."
+  - name: "Connection design"
+    blurb: "PE-stamped connection design coordinated with the EOR."   # TODO verify PE stamping
+  - name: "Rebar detailing"
+    blurb: "Placing drawings, bar bending schedules and quantity take-offs."
+  - name: "BIM and clash detection"
+    blurb: "Federated models, clash reports and coordination with other trades."
+  - name: "Shop drawing checking"
+    blurb: "Independent checking of drawings produced in-house or by others."
+
+software:
+  - "Tekla Structures"
+  - "SDS/2"
+  - "AutoCAD"
+  - "Advance Steel"
+  - "Navisworks"
+
+value_props:
+  - "Overnight turnaround - your team sends RFIs at 5pm, drawings land by morning."
+  - "Detailers who work to AISC and CISC standards, not generic CAD operators."
+  - "Scales up for a rush job without you carrying the headcount year-round."
+  - "Fixed price per ton or per drawing, so the estimate is the invoice."
+  - "Checked drawings - every package goes through an independent checker before it ships."
+
+proof:
+  - "We detail roughly TODO tons a year across TODO projects."   # TODO fill in real numbers
+  - "Typical first project is a small misc-steel package so you can test us cheaply."
+
+pricing:
+  # The agent NEVER quotes a firm price. It gives ranges only if pushed and
+  # always routes to a human for a real quote.
+  policy: "Give ballpark framing only, never a firm number. Any real quote comes from a human estimator after seeing drawings."
+  ballpark: "Most shops we work with land somewhere in the usual per-ton market range - but it moves a lot with complexity, so our estimator prices off your actual drawings."
+
+human_handoff:
+  name: "the estimating team"
+  email: "TODO@rntsteeldetail.com"      # TODO
+  phone: "TODO"                          # TODO
+  calendar_link: "TODO"                  # TODO - booking link read out / SMS'd
+
+caller_identity:
+  # Regulatory: in most US states the agent must identify itself as an
+  # automated/AI caller if asked, and many states now require proactive
+  # disclosure. Keep disclose_proactively: true unless counsel says otherwise.
+  agent_name: "Riya"
+  disclose_proactively: true
+  disclosure_line: "Quick heads up, I'm an AI assistant calling on behalf of RNT Steel Detailing - is it alright if I take thirty seconds?"
+  ai_disclosure_on_request: "Yes, I'm an AI assistant - I work for RNT Steel Detailing and I can put you through to a person any time you want."

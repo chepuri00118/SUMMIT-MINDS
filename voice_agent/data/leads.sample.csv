@@ -1,0 +1,4 @@
+first_name,last_name,company,title,phone,email,city,state,timezone,notes,status
+Mike,Dolan,Dolan Steel Fabricators,Owner,+15550100001,mike@example.com,Akron,OH,America/New_York,Found on AISC member directory,new
+Dana,Ruiz,Crestline Erectors,Chief Estimator,+15550100002,dana@example.com,Denver,CO,America/Denver,Bidding two mid-rise jobs,new
+Tom,Whitfield,Whitfield Structural,Detailing Manager,+15550100003,tom@example.com,Tacoma,WA,America/Los_Angeles,Uses SDS/2 in house,new
