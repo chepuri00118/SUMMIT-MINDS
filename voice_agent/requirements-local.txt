@@ -1,0 +1,17 @@
+# Fully local stack - no accounts, no API keys, nothing billed.
+# Install on top of requirements.txt:  pip install -r requirements-local.txt
+#
+# The brain is Ollama, which is not a Python package - scripts/setup_local.sh
+# installs it and pulls a model.
+
+# Ears. int8 on CPU is the difference between usable and unusable on a laptop.
+faster-whisper>=1.0.0
+
+# Voice.
+piper-tts>=1.2.0
+
+# Microphone and speakers. Needs PortAudio on the system:
+#   Debian/Ubuntu:  sudo apt install portaudio19-dev
+#   macOS:          brew install portaudio
+sounddevice>=0.4.6
+numpy>=1.24

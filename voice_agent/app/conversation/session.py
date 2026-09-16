@@ -81,7 +81,7 @@ class CallSession:
         self._closed = True
         await self.stt.close()
         await self.tts.close()
-        await self.outcome.finalize(self.agent.messages)
+        await self.outcome.finalize(self.agent.turns)
 
     def _apply_start(self, message: dict[str, Any]) -> None:
         """Record stream identifiers and queue our opening turn. Idempotent -

@@ -5,3 +5,6 @@ data/calls/
 data/call_summary.csv
 data/do_not_call.csv
 .venv/
+models/
+*.onnx
+*.onnx.json

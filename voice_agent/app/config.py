@@ -40,8 +40,20 @@ class Settings:
     elevenlabs_model = os.environ.get("ELEVENLABS_MODEL", "eleven_flash_v2_5")
 
     # --- brain -----------------------------------------------------------
+    # "anthropic" for hosted Claude, "ollama" for a model on this machine.
+    # Defaults to ollama when no Anthropic key is present, so a fresh clone
+    # with no accounts still runs.
+    brain_provider = os.environ.get(
+        "BRAIN_PROVIDER", "anthropic" if os.environ.get("ANTHROPIC_API_KEY") else "ollama"
+    )
     anthropic_api_key = os.environ.get("ANTHROPIC_API_KEY", "")
     model = os.environ.get("AGENT_MODEL", "claude-opus-5")
+    ollama_model = os.environ.get("OLLAMA_MODEL", "qwen2.5:7b-instruct")
+    ollama_host = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
+
+    # --- local speech ----------------------------------------------------
+    whisper_model = os.environ.get("WHISPER_MODEL", "base.en")
+    piper_voice = os.environ.get("PIPER_VOICE", "")
 
     # --- server ----------------------------------------------------------
     public_base_url = os.environ.get("PUBLIC_BASE_URL", "").rstrip("/")
@@ -63,16 +75,18 @@ class Settings:
 
     def require_live_credentials(self) -> None:
         """Fail loudly before a real campaign rather than mid-call."""
-        for name in (
+        required = [
             "TWILIO_ACCOUNT_SID",
             "TWILIO_AUTH_TOKEN",
             "TWILIO_FROM_NUMBER",
             "DEEPGRAM_API_KEY",
             "ELEVENLABS_API_KEY",
             "ELEVENLABS_VOICE_ID",
-            "ANTHROPIC_API_KEY",
             "PUBLIC_BASE_URL",
-        ):
+        ]
+        if self.brain_provider == "anthropic":
+            required.append("ANTHROPIC_API_KEY")
+        for name in required:
             _require(name)
 
 

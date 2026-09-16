@@ -45,6 +45,49 @@ do most of the work:
   corporate vocabulary and three-sentence turns, and `app/brain/humanizer.py`
   scrubs anything that leaks through and adds occasional breath pauses.
 
+## Two ways to run it
+
+The agent's brain, ears and voice are each swappable, so you can run the whole
+thing with no accounts at all while you tune the pitch, then switch to the
+hosted services when you are ready to dial real numbers.
+
+| | Fully local | Hosted (for real calls) |
+|---|---|---|
+| Brain | Ollama on your machine | Claude |
+| Ears | faster-whisper | Deepgram |
+| Voice | Piper | ElevenLabs |
+| Phone | your microphone | Twilio |
+| Cost | nothing | a few cents a call |
+| Accounts needed | none | four |
+
+Only `BRAIN_PROVIDER` decides the brain; the phone path always uses Deepgram
+and ElevenLabs, because phone audio is 8kHz mu-law and the local models are not
+set up for it.
+
+## Running it with no accounts
+
+```bash
+cd voice_agent
+pip install -r requirements.txt
+./scripts/setup_local.sh        # installs Ollama, a model, Whisper and Piper
+```
+
+Put the three lines it prints into `.env`, then:
+
+```bash
+python scripts/simulate_call.py --script hostile   # text, fastest to iterate
+python scripts/talk_local.py                       # actually talk to it out loud
+```
+
+`talk_local.py` is microphone to speakers with nothing leaving your laptop.
+
+**What local mode will not tell you.** A 7B model is noticeably stiffer than
+Claude and will sometimes miss a tool call, so judge the *shape* of the call
+here, not the polish. And Whisper cannot transcribe until you stop talking, so
+turn-taking is slower and more polite than a real call — local mode cannot show
+you barge-in or true latency. Those only show up on stage 4, calling your own
+mobile.
+
 ## Setup
 
 ```bash

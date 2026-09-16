@@ -88,7 +88,7 @@ class CallOutcome:
         return f"unknown tool {name}"
 
     # -- persistence ------------------------------------------------------
-    async def finalize(self, messages: list[dict[str, Any]]) -> None:
+    async def finalize(self, turns: list[Any] | None = None) -> None:
         record = {
             "call_sid": self.call_sid,
             "lead": self.lead,

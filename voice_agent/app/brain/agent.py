@@ -5,8 +5,7 @@ import asyncio
 import logging
 from typing import Any, AsyncIterator, Callable
 
-from anthropic import AsyncAnthropic
-
+from app.brain.backends import Brain, TextDelta, ToolCall, Turn, build_brain
 from app.brain.prompts import build_system_prompt
 from app.config import settings
 
@@ -143,6 +142,17 @@ TOOLS: list[dict[str, Any]] = [
 ]
 
 
+# Tools after which there is nothing left to say. Without this the agent runs
+# end_call and then loops straight back to the model, which costs a round trip
+# at the exact moment we want the line to drop.
+TERMINAL_TOOLS = {"end_call", "transfer_to_human"}
+
+# A confused model can call tools forever. On a phone call that is dead air and
+# a growing bill, so the loop is capped rather than trusted. Small local models
+# hit this; hosted Claude generally does not.
+MAX_TOOL_ROUNDS = 5
+
+
 class CallAgent:
     """Holds the transcript for one call and streams the next thing to say."""
 
@@ -150,19 +160,19 @@ class CallAgent:
         self,
         lead: dict[str, Any],
         tool_handler: Callable[[str, dict[str, Any]], Any],
-        client: AsyncAnthropic | None = None,
+        brain: Brain | None = None,
     ) -> None:
         self.lead = lead
         self.system = build_system_prompt(lead)
-        self.messages: list[dict[str, Any]] = []
+        self.turns: list[Turn] = []
         self.tool_handler = tool_handler
-        self.client = client or AsyncAnthropic(api_key=settings.anthropic_api_key)
+        self.brain = brain or build_brain(settings)
         self.should_hang_up = False
         self._generation = 0
 
     # -- transcript -------------------------------------------------------
     def record_prospect(self, text: str) -> None:
-        self.messages.append({"role": "user", "content": text})
+        self.turns.append(Turn(role="user", text=text))
 
     def cancel_current_turn(self) -> None:
         """Called on barge-in. Invalidates any in-flight generation."""
@@ -176,79 +186,63 @@ class CallAgent:
         it into speech - see humanizer.split_for_streaming.
         """
         generation = self._generation
-        if not self.messages:
-            # Kick the model off: it needs a user turn to respond to.
-            self.messages.append({"role": "user", "content": "[call connected]"})
+        if not self.turns:
+            # The model needs something to respond to before it will open.
+            self.turns.append(Turn(role="user", text="[call connected]"))
 
-        while True:
-            assistant_blocks: list[dict[str, Any]] = []
-            tool_uses: list[dict[str, Any]] = []
+        for round_number in range(MAX_TOOL_ROUNDS):
             text_buffer = ""
+            tool_calls: list[ToolCall] = []
 
-            async with self.client.messages.stream(
-                model=settings.model,
-                max_tokens=300,  # a phone turn is short by construction
-                # Thinking stays on but at the lowest effort. Turning it off
-                # entirely is the obvious latency move and it is a trap here:
-                # with thinking disabled the model sometimes writes a tool call
-                # into its visible text instead of a tool_use block, which on
-                # this app means the agent literally says "log_discovery" out
-                # loud to a prospect. Low effort gets the latency without that.
-                thinking={"type": "adaptive"},
-                output_config={"effort": "low"},
-                system=self.system,
-                tools=TOOLS,
-                messages=self.messages,
-            ) as stream:
-                async for event in stream:
-                    if generation != self._generation:
-                        # Barge-in: the prospect started talking. Stop mid-word.
-                        log.info("turn cancelled by barge-in")
-                        return
-                    if event.type == "text":
-                        # Thinking blocks also stream; only spoken text counts.
-                        text_buffer += event.text
-                        yield event.text
+            async for event in self.brain.stream(self.system, self.turns, TOOLS):
+                if generation != self._generation:
+                    # Barge-in: the prospect started talking. Stop mid-word.
+                    log.info("turn cancelled by barge-in")
+                    return
+                if isinstance(event, TextDelta):
+                    text_buffer += event.text
+                    yield event.text
+                elif isinstance(event, ToolCall):
+                    tool_calls.append(event)
 
-                final = await stream.get_final_message()
+            self.turns.append(
+                Turn(
+                    role="assistant",
+                    text=text_buffer,
+                    tool_calls=[
+                        {"id": c.id, "name": c.name, "input": c.input} for c in tool_calls
+                    ],
+                )
+            )
 
-            for block in final.content:
-                if block.type == "text":
-                    assistant_blocks.append({"type": "text", "text": block.text})
-                elif block.type == "tool_use":
-                    assistant_blocks.append(
-                        {
-                            "type": "tool_use",
-                            "id": block.id,
-                            "name": block.name,
-                            "input": block.input,
-                        }
-                    )
-                    tool_uses.append({"id": block.id, "name": block.name, "input": block.input})
-
-            self.messages.append({"role": "assistant", "content": assistant_blocks})
-
-            if not tool_uses:
+            if not tool_calls:
                 return
 
-            results = []
-            for use in tool_uses:
+            if any(call.name in TERMINAL_TOOLS for call in tool_calls):
+                self.should_hang_up = True
+
+            for call in tool_calls:
                 try:
-                    outcome = self.tool_handler(use["name"], use["input"])
+                    outcome = self.tool_handler(call.name, call.input)
                     if asyncio.iscoroutine(outcome):
                         outcome = await outcome
                 except Exception as exc:  # a tool failure must not kill the call
-                    log.exception("tool %s failed", use["name"])
+                    log.exception("tool %s failed", call.name)
                     outcome = f"error: {exc}"
-                results.append(
-                    {
-                        "type": "tool_result",
-                        "tool_use_id": use["id"],
-                        "content": str(outcome or "ok"),
-                    }
+                self.turns.append(
+                    Turn(
+                        role="tool",
+                        tool_call_id=call.id,
+                        tool_name=call.name,
+                        tool_result=str(outcome or "ok"),
+                    )
                 )
-
-            self.messages.append({"role": "user", "content": results})
 
             if self.should_hang_up:
                 return
+        else:
+            log.warning(
+                "hit the %d-round tool cap without a final answer - a model "
+                "looping on tools would otherwise hold the line open",
+                MAX_TOOL_ROUNDS,
+            )
