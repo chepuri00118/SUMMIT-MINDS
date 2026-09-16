@@ -187,8 +187,15 @@ class CallAgent:
 
             async with self.client.messages.stream(
                 model=settings.model,
-                max_tokens=300,          # a phone turn is short by construction
-                temperature=0.85,        # varied phrasing; lower sounds scripted
+                max_tokens=300,  # a phone turn is short by construction
+                # Thinking stays on but at the lowest effort. Turning it off
+                # entirely is the obvious latency move and it is a trap here:
+                # with thinking disabled the model sometimes writes a tool call
+                # into its visible text instead of a tool_use block, which on
+                # this app means the agent literally says "log_discovery" out
+                # loud to a prospect. Low effort gets the latency without that.
+                thinking={"type": "adaptive"},
+                output_config={"effort": "low"},
                 system=self.system,
                 tools=TOOLS,
                 messages=self.messages,
@@ -199,6 +206,7 @@ class CallAgent:
                         log.info("turn cancelled by barge-in")
                         return
                     if event.type == "text":
+                        # Thinking blocks also stream; only spoken text counts.
                         text_buffer += event.text
                         yield event.text
 

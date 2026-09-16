@@ -73,13 +73,27 @@ code.
 ## 2. Rehearse it for free
 
 ```bash
-python scripts/simulate_call.py
+export ANTHROPIC_API_KEY=sk-ant-...
+
+# read a whole call end to end, no typing
+python scripts/simulate_call.py --script interested
+python scripts/simulate_call.py --script brushoff
+python scripts/simulate_call.py --script skeptical
+python scripts/simulate_call.py --script hostile
+
+# or play the prospect yourself
 python scripts/simulate_call.py --persona busy
 ```
 
-A terminal chat against the real prompt and real tools. Use this to tune the
-script until the transcripts read the way your best salesperson talks. Only
-`ANTHROPIC_API_KEY` is needed.
+Runs the real prompt, the real tools and the real humanizer, so the text is
+what the voice would say. Tool calls are printed inline as they fire, so you
+can watch it grade the lead and capture the email. Only `ANTHROPIC_API_KEY` is
+needed — no phone, no Twilio, no call minutes.
+
+The four `--script` scenarios are the conversations that actually happen on
+these calls: a live one, a brush-off, a quality-skeptic, and someone who wants
+off the list. Run `hostile` first — it is the one where a bad agent creates a
+legal problem rather than a lost deal.
 
 ## 3. Run the server
 
@@ -121,6 +135,11 @@ the call, with a reason.
   past it.
 - **Local calling hours.** Calls only go out 9am–5pm on weekdays *in the
   prospect's timezone*, not yours.
+- **Latency vs. safety on the model call.** Thinking runs at `low` effort
+  rather than being switched off. Disabling it outright is the obvious way to
+  shave latency and it backfires here: the model then sometimes writes a tool
+  call into its visible text instead of making a real one, which on a phone
+  call means the agent says "log_discovery" out loud to a prospect.
 - **AI disclosure.** The agent identifies itself as an AI assistant, and always
   answers honestly when asked. This is a legal requirement in a growing number
   of US states and is on by default in `config/company.yaml`.

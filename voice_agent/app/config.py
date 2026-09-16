@@ -41,7 +41,7 @@ class Settings:
 
     # --- brain -----------------------------------------------------------
     anthropic_api_key = os.environ.get("ANTHROPIC_API_KEY", "")
-    model = os.environ.get("AGENT_MODEL", "claude-sonnet-5")
+    model = os.environ.get("AGENT_MODEL", "claude-opus-5")
 
     # --- server ----------------------------------------------------------
     public_base_url = os.environ.get("PUBLIC_BASE_URL", "").rstrip("/")

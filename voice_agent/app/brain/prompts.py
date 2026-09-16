@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import random
 from typing import Any
 
 from app.config import company, script
@@ -75,6 +76,15 @@ def build_system_prompt(lead: dict[str, Any]) -> str:
     scr = script()
     identity = comp["caller_identity"]
 
+    # The opener is chosen here rather than by the model. Sampling temperature
+    # is not available on current models, so left to itself the model opens
+    # near-identically every call - and a hundred prospects hearing the same
+    # first sentence is exactly what gets a number reported as spam.
+    opener = random.choice(scr["openers"]).format(
+        first_name=lead.get("first_name", "there"),
+        agent_name=identity["agent_name"],
+    )
+
     facts = {
         "company": comp["company"],
         "services": comp["services"],
@@ -99,8 +109,8 @@ YOUR GOAL
 COMPANY FACTS - the only things you may state as fact
 {json.dumps(facts, indent=2)}
 
-OPENERS - pick one and adapt it, do not read it robotically
-{json.dumps(scr['openers'], indent=2)}
+YOUR OPENER - adapt it to sound spontaneous, do not read it robotically
+{opener}
 
 WHY YOU CALLED (one sentence, then stop talking)
 {scr['permission_bridge']}
